@@ -3,6 +3,10 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <RootNamespace>Eventy</RootNamespace>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>0.1.0</Version>
+        <Authors>Thomas Ian Wright</Authors>
+        <Company>Thomasianwright</Company>
     </PropertyGroup>
 
     <ItemGroup>
