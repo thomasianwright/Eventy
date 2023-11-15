@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contexts;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.IoC.Services;
-using Eventy.Abstractions.Transports.Services;
+using Eventy.Events.Contexts;
+using Eventy.Events.Contracts;
+using Eventy.IoC.Services;
+using Eventy.Transports.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Eventy.Core.Events.Consumers
+namespace Eventy.Events.Consumers
 {
     public abstract class EventConsumerHandler<TProvider> where TProvider : ITransportProvider
     {

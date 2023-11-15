@@ -1,4 +1,4 @@
-﻿namespace Eventy.Abstractions.Transports.Services
+﻿namespace Eventy.Transports.Services
 {
     public interface IBus : IEventPublisher
     {

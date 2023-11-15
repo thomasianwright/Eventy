@@ -1,11 +1,11 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contexts;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Transports.Services;
+using Eventy.Events.Contexts;
+using Eventy.Events.Contracts;
+using Eventy.Transports.Services;
 using FluentResults;
 
-namespace Eventy.Abstractions.Events.Consumers
+namespace Eventy.Events.Consumers
 {
     public interface IConsumer
     {

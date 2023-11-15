@@ -1,8 +1,8 @@
-﻿using Eventy.Abstractions.Events.Consumers;
-using Eventy.Abstractions.Events.Contexts;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Transports.Services;
-using Eventy.Core.Events.Attributes;
+﻿using Eventy.Events.Attributes;
+using Eventy.Events.Consumers;
+using Eventy.Events.Contexts;
+using Eventy.Events.Contracts;
+using Eventy.Transports.Services;
 using FluentResults;
 
 namespace Event.Demo.Api.Events;

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contracts;
+using Eventy.Events.Contracts;
 
-namespace Eventy.Abstractions.Events.States
+namespace Eventy.Events.States
 {
     public interface IRequestState : ICorrelatedBy<Guid>
     {

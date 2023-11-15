@@ -1,8 +1,8 @@
-﻿using Eventy.Abstractions.Events.Encoders;
-using Eventy.Abstractions.Transports.Services;
+﻿using Eventy.Events.Encoders;
+using Eventy.Transports.Services;
 using RabbitMQ.Client;
 
-namespace Eventy.Transports.RabbitMQ.Contracts
+namespace Eventy.RabbitMQ.Contracts
 {
     public interface IRabbitMqTransportProvider : ITransportProvider
     {

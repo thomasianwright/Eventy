@@ -1,4 +1,4 @@
-﻿using Eventy.Abstractions.IoC.Services;
+﻿using Eventy.IoC.Services;
 
 namespace Event.Demo.Api;
 

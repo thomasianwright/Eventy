@@ -1,7 +1,7 @@
 ﻿using System;
-using Eventy.Abstractions.Events.Contracts;
+using Eventy.Events.Contracts;
 
-namespace Eventy.Core.Events.Attributes
+namespace Eventy.Events.Attributes
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class EventTopologyAttribute : Attribute, IEventTopology

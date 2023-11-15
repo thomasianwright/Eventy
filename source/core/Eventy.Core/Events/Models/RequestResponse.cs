@@ -1,7 +1,7 @@
 ﻿using System;
-using Eventy.Abstractions.Events.Contracts;
+using Eventy.Events.Contracts;
 
-namespace Eventy.Core.Events.Models
+namespace Eventy.Events.Models
 {
     public class RequestResponse : IResponse
     {

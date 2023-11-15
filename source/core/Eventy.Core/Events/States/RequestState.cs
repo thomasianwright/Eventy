@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Events.States;
+using Eventy.Events.Contracts;
 
-namespace Eventy.Core.Events.States
+namespace Eventy.Events.States
 {
     public class RequestState : IRequestState
     {

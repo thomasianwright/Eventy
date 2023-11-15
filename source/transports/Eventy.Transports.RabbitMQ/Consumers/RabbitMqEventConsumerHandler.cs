@@ -3,20 +3,19 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Consumers;
-using Eventy.Abstractions.Events.Contexts;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Events.Encoders;
-using Eventy.Abstractions.IoC.Services;
-using Eventy.Core.Events.Consumers;
-using Eventy.Transports.RabbitMQ.Contexts;
-using Eventy.Transports.RabbitMQ.Contracts;
+using Eventy.Events.Consumers;
+using Eventy.Events.Contexts;
+using Eventy.Events.Contracts;
+using Eventy.Events.Encoders;
+using Eventy.IoC.Services;
+using Eventy.RabbitMQ.Contexts;
+using Eventy.RabbitMQ.Contracts;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Eventy.Transports.RabbitMQ.Consumers
+namespace Eventy.RabbitMQ.Consumers
 {
     public sealed class RabbitMqEventConsumerHandler : EventConsumerHandler<IRabbitMqTransportProvider>
     {

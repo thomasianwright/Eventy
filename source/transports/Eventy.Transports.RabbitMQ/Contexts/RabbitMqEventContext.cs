@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contexts;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Core.Events.Models;
+using Eventy.Events.Contexts;
+using Eventy.Events.Contracts;
+using Eventy.Events.Models;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 
-namespace Eventy.Transports.RabbitMQ.Contexts
+namespace Eventy.RabbitMQ.Contexts
 {
     public class RabbitMqEventContext : IEventContext
     {

@@ -2,16 +2,15 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Clients;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Events.States;
-using Eventy.Core.Events.Models;
-using Eventy.Core.Events.States;
-using Eventy.Transports.RabbitMQ.Contracts;
+using Eventy.Events.Clients;
+using Eventy.Events.Contracts;
+using Eventy.Events.Models;
+using Eventy.Events.States;
+using Eventy.RabbitMQ.Contracts;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Eventy.Transports.RabbitMQ.Clients
+namespace Eventy.RabbitMQ.Clients
 {
     public class RabbitMqRequestClient<TEvent> : IRequestClient<TEvent>
         where TEvent : IEvent

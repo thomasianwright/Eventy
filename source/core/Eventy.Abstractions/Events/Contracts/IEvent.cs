@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eventy.Abstractions.Events.Contracts
+namespace Eventy.Events.Contracts
 {
     public interface IEvent : ICorrelatedBy<Guid>
     {

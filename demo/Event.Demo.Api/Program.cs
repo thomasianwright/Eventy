@@ -1,11 +1,10 @@
 using Event.Demo.Api;
 using Event.Demo.Api.Events;
-using Eventy.Abstractions.Events.Encoders;
-using Eventy.Abstractions.IoC.Services;
-using Eventy.Abstractions.Transports.Services;
-using Eventy.Core.Events.Encoders;
-using Eventy.Transports.RabbitMQ;
-using Eventy.Transports.RabbitMQ.Contracts;
+using Eventy.Events.Encoders;
+using Eventy.IoC.Services;
+using Eventy.RabbitMQ;
+using Eventy.RabbitMQ.Contracts;
+using Eventy.Transports.Services;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);

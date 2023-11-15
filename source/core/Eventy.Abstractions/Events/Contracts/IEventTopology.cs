@@ -1,4 +1,4 @@
-﻿namespace Eventy.Abstractions.Events.Contracts
+﻿namespace Eventy.Events.Contracts
 {
     public interface IEventTopology
     {

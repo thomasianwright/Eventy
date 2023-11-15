@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Text;
-using Eventy.Abstractions.Events.Encoders;
 using Newtonsoft.Json;
 
-namespace Eventy.Core.Events.Encoders
+namespace Eventy.Events.Encoders
 {
     public class EventEncoder : IEventEncoder
     {

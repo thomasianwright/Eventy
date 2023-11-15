@@ -1,5 +1,5 @@
 ﻿using Event.Demo.Api.Events;
-using Eventy.Abstractions.Transports.Services;
+using Eventy.Transports.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Event.Demo.Api.Controllers;

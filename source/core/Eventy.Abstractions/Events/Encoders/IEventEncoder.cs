@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eventy.Abstractions.Events.Encoders
+namespace Eventy.Events.Encoders
 {
     public interface IEventEncoder
     {

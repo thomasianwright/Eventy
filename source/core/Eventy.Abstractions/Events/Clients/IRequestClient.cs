@@ -2,10 +2,10 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contracts;
-using Eventy.Abstractions.Events.States;
+using Eventy.Events.Contracts;
+using Eventy.Events.States;
 
-namespace Eventy.Abstractions.Events.Clients
+namespace Eventy.Events.Clients
 {
     public interface IRequestClient : IDisposable
     {

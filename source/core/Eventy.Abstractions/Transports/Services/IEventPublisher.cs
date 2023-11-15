@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contracts;
+using Eventy.Events.Contracts;
 
-namespace Eventy.Abstractions.Transports.Services
+namespace Eventy.Transports.Services
 {
     public interface IEventPublisher
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eventy.Abstractions.IoC.Services
+namespace Eventy.IoC.Services
 {
     public interface IServiceResolver : IDisposable
     {

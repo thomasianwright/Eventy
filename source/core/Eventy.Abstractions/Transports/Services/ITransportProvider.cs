@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eventy.Abstractions.Events.Contracts;
+using Eventy.Events.Contracts;
 using FluentResults;
 
-namespace Eventy.Abstractions.Transports.Services
+namespace Eventy.Transports.Services
 {
     public interface ITransportProvider : IBus, IDisposable
     {
