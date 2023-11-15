@@ -9,12 +9,12 @@ namespace Event.Demo.Api.Controllers;
 public class TestController : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get([FromServices] IEventPublisher publisher)
+    public async Task<IActionResult> Get([FromServices] IEventPublisher publisher, [FromQuery] string message, CancellationToken cancellationToken = default)
     {
         var response = await publisher.RequestAsync(new TestRequest()
         {
             CorrelationId = Guid.NewGuid(),
-            Message = "Hello World"
+            Message = message
         });
 
         return Ok(response);

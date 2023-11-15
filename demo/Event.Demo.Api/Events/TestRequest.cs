@@ -22,13 +22,17 @@ public class TestResponse
 
 public class TestResponseHandler : IConsumer<TestRequest>
 {
+    private readonly ILogger<TestResponseHandler> _logger;
+
     public TestResponseHandler(ILogger<TestResponseHandler> logger)
     {
-        
+        _logger = logger;
     }
     
     public async Task<Result> ConsumeAsync(TestRequest @event, CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation($"CONSUMED: {@event.Message}");
+        
         await Context.RespondAsync(new TestResponse()
         {
             Message = $"SERVER: {@event.Message}"
