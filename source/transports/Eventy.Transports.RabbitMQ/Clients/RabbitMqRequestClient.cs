@@ -43,15 +43,20 @@ namespace Eventy.RabbitMQ.Clients
         public Task<IResponse> RequestAsync<T>(TEvent @event, CancellationToken cancellationToken = default)
             where T : IEvent, ICorrelatedBy<Guid>
         {
-            var state = new RequestState(@event.CorrelationId);
+            var messageId = Guid.NewGuid();
+            
+            cancellationToken.Register(() => PendingRequests.TryRemove(messageId, out _));
+            var state = new RequestState(@event.CorrelationId, cancellationToken);
 
-            PendingRequests.TryAdd(@event.CorrelationId, state);
+            PendingRequests.TryAdd(messageId, state);
 
             var body = _transportProvider.Encoder.Encode(@event);
 
             var properties = _model.CreateBasicProperties();
+            
             properties.ReplyTo = _topology.CallbackQueueName;
             properties.CorrelationId = @event.CorrelationId.ToString();
+            properties.MessageId = messageId.ToString();
             properties.Persistent = true;
             properties.ContentType = "application/json";
             
@@ -60,32 +65,32 @@ namespace Eventy.RabbitMQ.Clients
             return state.TaskCompletionSource.Task;
         }
 
-        public void Dispose()
-        {
-            _transportProvider?.Dispose();
-            _model?.Dispose();
-        }
-
         private async Task ConsumerOnReceived(object sender, BasicDeliverEventArgs @event)
         {
             var headers = @event.BasicProperties.Headers ?? new ConcurrentDictionary<string, object>();
             var body = @event.Body.ToArray();
-
-            if (string.IsNullOrEmpty(@event.BasicProperties.CorrelationId) ||
-                !Guid.TryParse(@event.BasicProperties.CorrelationId, out var correlationGuid) ||
-                !PendingRequests.TryRemove(correlationGuid, out var state))
+            
+            if (!@event.BasicProperties.IsMessageIdPresent() || string.IsNullOrEmpty(@event.BasicProperties.MessageId) || !Guid.TryParse(@event.BasicProperties.MessageId, out var messageId))
             {
                 _model.BasicReject(@event.DeliveryTag, false);
                 return;
             }
 
-            var decodedEvent = _transportProvider.Encoder.Decode<IResponse>(body, typeof(RequestResponse));
+            if (!PendingRequests.TryRemove(messageId, out var state))
+                return;
 
+            var decodedEvent = _transportProvider.Encoder.Decode<IResponse>(body, typeof(RequestResponse));
+            decodedEvent.Headers = headers;
+            
             state.SetResponse(decodedEvent);
             
             _model.BasicAck(@event.DeliveryTag, false);
-
-            return;
+        }
+        
+        public void Dispose()
+        {
+            _transportProvider?.Dispose();
+            _model?.Dispose();
         }
     }
 }

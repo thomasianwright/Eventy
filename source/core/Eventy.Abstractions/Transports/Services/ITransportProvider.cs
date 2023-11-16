@@ -15,7 +15,7 @@ namespace Eventy.Transports.Services
         Result AddEventTypes(params Type[] eventTypes);
         Result AddConsumers(params Type[] consumers);
 
-        Task<Result> Start();
+        Result Start();
 
         Result Stop();
     }

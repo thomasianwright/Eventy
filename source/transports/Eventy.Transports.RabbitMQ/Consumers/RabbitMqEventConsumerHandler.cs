@@ -8,10 +8,10 @@ using Eventy.Events.Contexts;
 using Eventy.Events.Contracts;
 using Eventy.Events.Encoders;
 using Eventy.IoC.Services;
+using Eventy.Logging.Services;
 using Eventy.RabbitMQ.Contexts;
 using Eventy.RabbitMQ.Contracts;
 using FluentResults;
-using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -24,7 +24,7 @@ namespace Eventy.RabbitMQ.Consumers
         private CancellationToken _cancellationToken;
         private AsyncEventingBasicConsumer _consumer;
 
-        public RabbitMqEventConsumerHandler(ILogger logger, IRabbitMqTransportProvider provider,
+        public RabbitMqEventConsumerHandler(IEventLogger logger, IRabbitMqTransportProvider provider,
             IServiceResolver serviceResolver, Type consumerType, Type eventType, IEventEncoder encoder) : base(logger,
             provider, serviceResolver, consumerType, eventType)
         {
@@ -74,8 +74,7 @@ namespace Eventy.RabbitMQ.Consumers
                     consumer.Bus = Provider;
                     consumer.Context = context;
 
-                    var result = await (_methodInfo.Invoke(consumer, new object[] { decodedEvent, cts.Token }) as
-                        Task<Result>);
+                    var result = await ((Task<Result>)_methodInfo.Invoke(consumer, new object[] { decodedEvent, cts.Token }));
 
                     if (result.IsSuccess)
                         context.Ack();
@@ -84,7 +83,7 @@ namespace Eventy.RabbitMQ.Consumers
                 }
             } catch (Exception e)
             {
-                Logger.LogError(e, $"Error while consuming event {EventType.Name}");
+                Logger.LogError( $"Error while consuming event {EventType.Name}");
             }
         }
 
@@ -96,9 +95,17 @@ namespace Eventy.RabbitMQ.Consumers
             return Task.CompletedTask;
         }
 
-        protected override IEventContext CreateEventContext(IEvent @event, IDictionary<string, object> headers)
+        protected override IEventContext CreateEventContext(IEvent @event, IDictionary<string, object> headers, Guid? messageId = null)
         {
-            return new RabbitMqEventContext(@event.CorrelationId, Topology, _model);
+            if (!messageId.HasValue)
+            {
+                messageId = Guid.NewGuid();
+            }
+
+            return new RabbitMqEventContext(@event.CorrelationId, Topology, _model)
+            {
+                MessageId = messageId.Value
+            };
         }
     }
 }

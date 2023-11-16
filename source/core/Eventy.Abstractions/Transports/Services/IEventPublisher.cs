@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eventy.Events.Contracts;
@@ -7,10 +8,10 @@ namespace Eventy.Transports.Services
 {
     public interface IEventPublisher
     {
-        Task<IResponse> RequestAsync<T>(T @event) where T : IEvent, ICorrelatedBy<Guid>;
+        Task<IResponse> RequestAsync<T>(T @event, IDictionary<string, object> headers = null,
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>;
 
-        Task PublishAsync<T>(T @event, CancellationToken cancellationToken) where T : IEvent, ICorrelatedBy<Guid>;
-
-        Task SendAsync<T>(T @event) where T : IEvent, ICorrelatedBy<Guid>;
+        Task PublishAsync<T>(T @event, IDictionary<string, object> headers = null, CancellationToken cancellationToken = default)
+            where T : IEvent, ICorrelatedBy<Guid>;
     }
 }

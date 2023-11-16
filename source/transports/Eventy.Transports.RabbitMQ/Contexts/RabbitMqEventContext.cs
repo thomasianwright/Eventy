@@ -25,6 +25,7 @@ namespace Eventy.RabbitMQ.Contexts
         internal ulong DeliveryTag { get; set; }
         public Guid? CorrelationId { get; }
         public IEventTopology Topology { get; }
+        public Guid MessageId { get; set; }
 
         bool IsAcked { get; set; }
         bool IsNacked { get; set; }
@@ -34,7 +35,9 @@ namespace Eventy.RabbitMQ.Contexts
             var properties = _model.CreateBasicProperties();
             properties.CorrelationId = CorrelationId.ToString();
             properties.ContentType = "application/json";
-
+            properties.Persistent = true;
+            properties.MessageId = MessageId.ToString();
+            
             var response = new RequestResponse()
             {
                 CorrelationId = CorrelationId ?? Guid.Empty,

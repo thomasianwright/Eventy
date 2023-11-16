@@ -10,25 +10,39 @@ using Eventy.Events.Consumers;
 using Eventy.Events.Contracts;
 using Eventy.Events.Encoders;
 using Eventy.IoC.Services;
+using Eventy.Logging.Services;
 using Eventy.RabbitMQ.Clients;
 using Eventy.RabbitMQ.Consumers;
 using Eventy.RabbitMQ.Contracts;
 using FluentResults;
-using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 
 namespace Eventy.RabbitMQ
 {
     public class RabbitMqTransportProvider : IRabbitMqTransportProvider
     {
+        public string Name => "RabbitMQ";
+
+        public ConcurrentDictionary<Type, IEventTopology> EventTopologies { get; } =
+            new ConcurrentDictionary<Type, IEventTopology>();
+
+        public IEventEncoder Encoder { get; }
+
+        public IConnection Connection { get; }
+
+        private IEventLogger Logger { get; set; }
+        private IServiceResolver ServiceResolver { get; set; }
+
+        private ConcurrentDictionary<Type, RabbitMqEventConsumerHandler> Consumers { get; } =
+            new ConcurrentDictionary<Type, RabbitMqEventConsumerHandler>();
+
+        private ConcurrentDictionary<Type, IRequestClient> RequestClients { get; } =
+            new ConcurrentDictionary<Type, IRequestClient>();
+
         private readonly IList<Type> _consumerTypes = new List<Type>();
-
         private readonly IList<Type> _eventTypes = new List<Type>();
-        private CancellationTokenSource _cts;
-        private TaskFactory _taskFactory;
 
-
-        public RabbitMqTransportProvider(ILogger<IRabbitMqTransportProvider> logger, IServiceResolver serviceResolver,
+        public RabbitMqTransportProvider(IEventLogger logger, IServiceResolver serviceResolver,
             IEventEncoder encoder, IConnection connection)
         {
             Encoder = encoder;
@@ -37,20 +51,7 @@ namespace Eventy.RabbitMQ
             ServiceResolver = serviceResolver;
         }
 
-        protected ILogger Logger { get; set; }
-        protected IServiceResolver ServiceResolver { get; set; }
-
-        internal IList<Type> ConsumerTypes { get; } = new List<Type>();
-
-        internal ConcurrentDictionary<Type, RabbitMqEventConsumerHandler> Consumers { get; } =
-            new ConcurrentDictionary<Type, RabbitMqEventConsumerHandler>();
-
-        private ConcurrentDictionary<Type, IRequestClient> RequestClients { get; } =
-            new ConcurrentDictionary<Type, IRequestClient>();
-
-        public IEventEncoder Encoder { get; }
-
-        public Task<Result> Start()
+        public Result Start()
         {
             foreach (var eventType in _eventTypes)
             {
@@ -62,8 +63,6 @@ namespace Eventy.RabbitMQ
 
                 EventTopologies.TryAdd(eventType, topologyAttribute);
             }
-
-            _taskFactory = new TaskFactory(TaskCreationOptions.LongRunning, TaskContinuationOptions.LongRunning);
 
             foreach (var type in _consumerTypes)
             {
@@ -77,11 +76,9 @@ namespace Eventy.RabbitMQ
                     new RabbitMqEventConsumerHandler(Logger, this, ServiceResolver, type, eventType, Encoder);
 
                 Consumers.TryAdd(type, consumer);
-
-                consumer.StartAsync();
             }
 
-            return Task.FromResult(Result.Ok());
+            return Result.Ok();
         }
 
         public Result Stop()
@@ -90,61 +87,62 @@ namespace Eventy.RabbitMQ
             return Result.Ok();
         }
 
-        public IConnection Connection { get; }
-
-        public void Dispose()
+        private RabbitMqRequestClient<T> GetRequestClient<T>() where T : IEvent
         {
-            Connection?.Dispose(); 
+            if (RequestClients.TryGetValue(typeof(T), out var client))
+                return (RabbitMqRequestClient<T>)client;
+
+            var requestClient = new RabbitMqRequestClient<T>(this);
+
+            RequestClients.TryAdd(typeof(T), requestClient);
+
+            return requestClient;
         }
 
-        public Task<IResponse> RequestAsync<T>(T @event) where T : IEvent, ICorrelatedBy<Guid>
+        public Task<IResponse> RequestAsync<T>(T @event, IDictionary<string, object> headers = null,
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>
         {
             if (@event.CorrelationId == Guid.Empty)
                 @event.CorrelationId = Guid.NewGuid();
             
+            if (headers == null)
+                headers = new Dictionary<string, object>();
+
+            if (!headers.ContainsKey("x-message-id"))
+                headers.Add("x-message-id", Guid.NewGuid().ToString());
+
             var requestClient = GetRequestClient<T>();
 
-            return requestClient.RequestAsync<T>(@event);
+            return requestClient.RequestAsync<T>(@event, cancellationToken);
         }
 
-        public Task PublishAsync<T>(T @event, CancellationToken cancellationToken) where T : IEvent, ICorrelatedBy<Guid>
+        public Task PublishAsync<T>(T @event, IDictionary<string, object> headers = null,
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>
         {
-            var model = Connection.CreateModel();
-            var topology = EventTopologies[@event.GetType()];
-            var body = Encoder.Encode(@event);
+            using (var model = Connection.CreateModel())
+            {
+                var topology = EventTopologies[@event.GetType()];
+                var body = Encoder.Encode(@event);
 
-            var properties = model.CreateBasicProperties();
-            properties.CorrelationId = @event.CorrelationId.ToString();
-            properties.ContentType = "application/json";
+                var properties = model.CreateBasicProperties();
+                
+                foreach (var header in headers ?? new Dictionary<string, object>())
+                    properties.Headers.Add(header.Key, header.Value);
 
-            model.BasicPublish(topology.ExchangeName, topology.RoutingKey, properties, body);
+                properties.CorrelationId = @event.CorrelationId.ToString();
+                properties.ContentType = "application/json";
+                properties.MessageId = Guid.NewGuid().ToString();
+
+                model.BasicPublish(
+                    topology.ExchangeName,
+                    topology.RoutingKey,
+                    properties,
+                    body
+                );
+            }
 
             return Task.CompletedTask;
         }
-
-        public Task SendAsync<T>(T @event) where T : IEvent, ICorrelatedBy<Guid>
-        {
-            var model = Connection.CreateModel();
-            var topology = EventTopologies[@event.GetType()];
-            var body = Encoder.Encode(@event);
-
-            var properties = model.CreateBasicProperties();
-            properties.CorrelationId = @event.CorrelationId.ToString();
-            properties.ContentType = "application/json";
-            model.BasicPublish(
-                topology.ExchangeName,
-                topology.RoutingKey,
-                properties,
-                body
-            );
-
-            return Task.CompletedTask;
-        }
-
-        public string Name => "RabbitMQ";
-
-        public ConcurrentDictionary<Type, IEventTopology> EventTopologies { get; } =
-            new ConcurrentDictionary<Type, IEventTopology>();
 
         public Result AddEventTypes(params Type[] eventTypes)
         {
@@ -182,15 +180,9 @@ namespace Eventy.RabbitMQ
             return result;
         }
 
-        private RabbitMqRequestClient<T> GetRequestClient<T>() where T : IEvent
+        public void Dispose()
         {
-            if (RequestClients.TryGetValue(typeof(T), out var client)) return (RabbitMqRequestClient<T>)client;
-
-            var requestClient = new RabbitMqRequestClient<T>(this);
-
-            RequestClients.TryAdd(typeof(T), requestClient);
-
-            return requestClient;
+            Connection?.Dispose();
         }
     }
 }
