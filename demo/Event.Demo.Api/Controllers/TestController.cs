@@ -15,7 +15,7 @@ public class TestController : ControllerBase
         {
             CorrelationId = Guid.NewGuid(),
             Message = message
-        });
+        }, cancellationToken: cancellationToken);
 
         return Ok(response);
     }
@@ -26,7 +26,7 @@ public class TestController : ControllerBase
         await publisher.PublishAsync(new TestEvent()
         {
             Message = message
-        }, cancellationToken);
+        }, cancellationToken: cancellationToken);
         
         return Ok();
     }

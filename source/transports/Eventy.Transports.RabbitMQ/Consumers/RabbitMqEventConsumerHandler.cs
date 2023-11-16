@@ -84,6 +84,8 @@ namespace Eventy.RabbitMQ.Consumers
             } catch (Exception e)
             {
                 Logger.LogError( $"Error while consuming event {EventType.Name}");
+                
+                _model.BasicNack(@event.DeliveryTag, false, true);
             }
         }
 

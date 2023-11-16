@@ -1,10 +1,14 @@
-﻿namespace Eventy.Logging.Services
+﻿using System.Collections.Generic;
+
+namespace Eventy.Logging.Services
 {
     public interface IEventLogger
     {
-        void LogInformation(string message);
-        void LogWarning(string message);
-        void LogError(string message);
-        void LogCritical(string message);
+        IDictionary<string, object> Properties { get; }
+        
+        void LogInformation(string message, IDictionary<string, object> properties = null);
+        void LogWarning(string message, IDictionary<string, object> properties = null);
+        void LogError(string message, IDictionary<string, object> properties = null);
+        void LogCritical(string message, IDictionary<string, object> properties = null);
     }
 }

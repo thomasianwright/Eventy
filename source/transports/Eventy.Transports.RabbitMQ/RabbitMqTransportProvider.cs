@@ -102,18 +102,25 @@ namespace Eventy.RabbitMQ
         public Task<IResponse> RequestAsync<T>(T @event, IDictionary<string, object> headers = null,
             CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>
         {
+            var topology = EventTopologies[@event.GetType()];
+            
             if (@event.CorrelationId == Guid.Empty)
                 @event.CorrelationId = Guid.NewGuid();
             
             if (headers == null)
-                headers = new Dictionary<string, object>();
+                headers = new Dictionary<string, object>(topology.Headers);
+            else
+            {
+                foreach (var header in topology.Headers.Where(x => !headers.ContainsKey(x.Key)))
+                    headers.Add(header.Key, header.Value);
+            }
 
             if (!headers.ContainsKey("x-message-id"))
                 headers.Add("x-message-id", Guid.NewGuid().ToString());
 
             var requestClient = GetRequestClient<T>();
 
-            return requestClient.RequestAsync<T>(@event, cancellationToken);
+            return requestClient.RequestAsync<T>(@event, headers, cancellationToken);
         }
 
         public Task PublishAsync<T>(T @event, IDictionary<string, object> headers = null,

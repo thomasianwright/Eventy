@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Eventy.Events.Clients;
@@ -40,25 +41,32 @@ namespace Eventy.RabbitMQ.Clients
         public ConcurrentDictionary<Guid, IRequestState> PendingRequests { get; } =
             new ConcurrentDictionary<Guid, IRequestState>();
 
-        public Task<IResponse> RequestAsync<T>(TEvent @event, CancellationToken cancellationToken = default)
+        public Task<IResponse> RequestAsync<T>(TEvent @event, IDictionary<string, object> headers, CancellationToken cancellationToken = default)
             where T : IEvent, ICorrelatedBy<Guid>
         {
-            var messageId = Guid.NewGuid();
+            var requestId = Guid.NewGuid();
             
-            cancellationToken.Register(() => PendingRequests.TryRemove(messageId, out _));
+            cancellationToken.Register(() => PendingRequests.TryRemove(requestId, out _));
             var state = new RequestState(@event.CorrelationId, cancellationToken);
 
-            PendingRequests.TryAdd(messageId, state);
+            PendingRequests.TryAdd(requestId, state);
 
             var body = _transportProvider.Encoder.Encode(@event);
 
             var properties = _model.CreateBasicProperties();
+
+            var messageIdStr = headers.TryGetValue("x-message-id", out var messageIdObj) ? messageIdObj.ToString() : "";
+            
+            if (!Guid.TryParse(messageIdStr, out var messageIdFromHeaders))
+                messageIdFromHeaders = Guid.NewGuid();
             
             properties.ReplyTo = _topology.CallbackQueueName;
             properties.CorrelationId = @event.CorrelationId.ToString();
-            properties.MessageId = messageId.ToString();
+            properties.MessageId = messageIdFromHeaders.ToString();
             properties.Persistent = true;
             properties.ContentType = "application/json";
+            
+            headers.Add("x-request-id", requestId.ToString());
             
             _model.BasicPublish(_topology.ExchangeName, _topology.RoutingKey, properties, body);
 
@@ -70,13 +78,13 @@ namespace Eventy.RabbitMQ.Clients
             var headers = @event.BasicProperties.Headers ?? new ConcurrentDictionary<string, object>();
             var body = @event.Body.ToArray();
             
-            if (!@event.BasicProperties.IsMessageIdPresent() || string.IsNullOrEmpty(@event.BasicProperties.MessageId) || !Guid.TryParse(@event.BasicProperties.MessageId, out var messageId))
+            if (!headers.TryGetValue("x-request-id", out var requestIdStr) || !Guid.TryParse(requestIdStr.ToString(), out var requestId))
             {
                 _model.BasicReject(@event.DeliveryTag, false);
                 return;
             }
 
-            if (!PendingRequests.TryRemove(messageId, out var state))
+            if (!PendingRequests.TryRemove(requestId, out var state))
                 return;
 
             var decodedEvent = _transportProvider.Encoder.Decode<IResponse>(body, typeof(RequestResponse));

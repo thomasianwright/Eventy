@@ -26,6 +26,7 @@ namespace Eventy.RabbitMQ.Contexts
         public Guid? CorrelationId { get; }
         public IEventTopology Topology { get; }
         public Guid MessageId { get; set; }
+        public Guid RequestId { get; set; }
 
         bool IsAcked { get; set; }
         bool IsNacked { get; set; }
@@ -33,10 +34,12 @@ namespace Eventy.RabbitMQ.Contexts
         public Task RespondAsync<T>(T data, bool isSuccess = true) where T : class
         {
             var properties = _model.CreateBasicProperties();
+            
             properties.CorrelationId = CorrelationId.ToString();
             properties.ContentType = "application/json";
             properties.Persistent = true;
             properties.MessageId = MessageId.ToString();
+            properties.Headers.Add("x-request-id", RequestId.ToString());
             
             var response = new RequestResponse()
             {

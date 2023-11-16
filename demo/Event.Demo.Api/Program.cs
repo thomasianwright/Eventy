@@ -59,6 +59,6 @@ var transportProvider = app.Services.GetRequiredService<ITransportProvider>();
 transportProvider.AddEventTypes(typeof(TestEvent), typeof(TestRequest));
 transportProvider.AddConsumers(typeof(TestEventConsumer), typeof(TestResponseHandler));
 
-await transportProvider.Start();
+transportProvider.Start();
 
 app.Run();
