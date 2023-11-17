@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Eventy.Events.Contexts;
@@ -31,14 +32,22 @@ namespace Eventy.RabbitMQ.Contexts
         bool IsAcked { get; set; }
         bool IsNacked { get; set; }
         
-        public Task RespondAsync<T>(T data, bool isSuccess = true) where T : class
+        public Task RespondAsync<T>(T data, IDictionary<string, object> headers = null, bool isSuccess = true) where T : class
         {
+            if (headers == null) 
+                headers = new Dictionary<string, object>();
             var properties = _model.CreateBasicProperties();
+
+            foreach (var header in headers)
+            {
+                properties.Headers.Add(header.Key, header.Value);
+            }
             
+            properties.Headers = properties.Headers ?? new Dictionary<string, object>();
             properties.CorrelationId = CorrelationId.ToString();
             properties.ContentType = "application/json";
             properties.Persistent = true;
-            properties.MessageId = MessageId.ToString();
+            properties.MessageId = Guid.NewGuid().ToString();
             properties.Headers.Add("x-request-id", RequestId.ToString());
             
             var response = new RequestResponse()
@@ -47,6 +56,8 @@ namespace Eventy.RabbitMQ.Contexts
                 IsSuccess = isSuccess,
                 Body = JsonConvert.SerializeObject(data)
             };
+            
+            Ack();
             
             _model.BasicPublish(
                 Topology.ExchangeName,

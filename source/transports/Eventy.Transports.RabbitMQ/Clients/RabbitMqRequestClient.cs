@@ -8,6 +8,7 @@ using Eventy.Events.Contracts;
 using Eventy.Events.Models;
 using Eventy.Events.States;
 using Eventy.RabbitMQ.Contracts;
+using Eventy.RabbitMQ.Extensions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -33,7 +34,7 @@ namespace Eventy.RabbitMQ.Clients
             _model.QueueBind(_topology.CallbackQueueName, _topology.ExchangeName, _topology.CallbackQueueName, null);
             
             _consumer = new AsyncEventingBasicConsumer(_model);
-            _consumer.Received += ConsumerOnReceived;
+            _consumer.Received += HandleCallbackAsync;
 
             _model.BasicConsume(_topology.CallbackQueueName, false, _consumer);
         }
@@ -47,40 +48,38 @@ namespace Eventy.RabbitMQ.Clients
             var requestId = Guid.NewGuid();
             
             cancellationToken.Register(() => PendingRequests.TryRemove(requestId, out _));
-            var state = new RequestState(@event.CorrelationId, cancellationToken);
+            var state = new RequestState(requestId, cancellationToken);
 
             PendingRequests.TryAdd(requestId, state);
 
             var body = _transportProvider.Encoder.Encode(@event);
 
             var properties = _model.CreateBasicProperties();
-
-            var messageIdStr = headers.TryGetValue("x-message-id", out var messageIdObj) ? messageIdObj.ToString() : "";
-            
-            if (!Guid.TryParse(messageIdStr, out var messageIdFromHeaders))
-                messageIdFromHeaders = Guid.NewGuid();
             
             properties.ReplyTo = _topology.CallbackQueueName;
             properties.CorrelationId = @event.CorrelationId.ToString();
-            properties.MessageId = messageIdFromHeaders.ToString();
+            properties.MessageId = Guid.NewGuid().ToString();
             properties.Persistent = true;
             properties.ContentType = "application/json";
             
-            headers.Add("x-request-id", requestId.ToString());
+            headers.AddHeader("x-request-id", requestId.ToString());
+            properties.Headers = headers;
             
             _model.BasicPublish(_topology.ExchangeName, _topology.RoutingKey, properties, body);
 
             return state.TaskCompletionSource.Task;
         }
 
-        private async Task ConsumerOnReceived(object sender, BasicDeliverEventArgs @event)
+        private async Task HandleCallbackAsync(object sender, BasicDeliverEventArgs @event)
         {
             var headers = @event.BasicProperties.Headers ?? new ConcurrentDictionary<string, object>();
             var body = @event.Body.ToArray();
             
-            if (!headers.TryGetValue("x-request-id", out var requestIdStr) || !Guid.TryParse(requestIdStr.ToString(), out var requestId))
+            var requestidExists = headers.GetHeader("x-request-id", out var requestIdStr);
+            
+            if (!requestidExists || !Guid.TryParse(requestIdStr, out var requestId))
             {
-                _model.BasicReject(@event.DeliveryTag, false);
+                _model.BasicAck(@event.DeliveryTag, false);
                 return;
             }
 

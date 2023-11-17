@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eventy.Events.Consumers;
@@ -11,6 +12,7 @@ using Eventy.IoC.Services;
 using Eventy.Logging.Services;
 using Eventy.RabbitMQ.Contexts;
 using Eventy.RabbitMQ.Contracts;
+using Eventy.RabbitMQ.Extensions;
 using FluentResults;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -57,7 +59,8 @@ namespace Eventy.RabbitMQ.Consumers
                 var consumingChannel = ((AsyncEventingBasicConsumer)sender).Model;
 
                 var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                var headers = @event.BasicProperties.Headers;
+                var headers = @event.BasicProperties.Headers ?? new Dictionary<string, object>();
+                
                 var body = @event.Body.ToArray();
 
                 var decodedEvent = Encoder.Decode<IEvent>(body, EventType);
@@ -104,9 +107,18 @@ namespace Eventy.RabbitMQ.Consumers
                 messageId = Guid.NewGuid();
             }
 
+            var requestIdExists = headers.GetHeader("x-request-id", out var requestId);
+            var requestIdGuid = Guid.Empty;
+            
+            if (requestIdExists)
+            {
+                requestIdGuid = Guid.Parse(requestId);
+            }
+            
             return new RabbitMqEventContext(@event.CorrelationId, Topology, _model)
             {
-                MessageId = messageId.Value
+                MessageId = messageId.Value,
+                RequestId = requestIdGuid
             };
         }
     }

@@ -2,6 +2,7 @@ using Event.Demo.Api;
 using Event.Demo.Api.Events;
 using Eventy.Events.Encoders;
 using Eventy.IoC.Services;
+using Eventy.Logging.Services;
 using Eventy.RabbitMQ;
 using Eventy.RabbitMQ.Contracts;
 using Eventy.Transports.Services;
@@ -45,6 +46,7 @@ builder.Services
 
 builder.Services.AddScoped<TestEventConsumer>()
     .AddScoped<TestResponseHandler>();
+builder.Services.AddSingleton<IEventLogger, NullEventLogger>();
 
 var app = builder.Build();
 
