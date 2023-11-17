@@ -4,7 +4,7 @@
         <TargetFramework>netstandard2.0</TargetFramework>
         <RootNamespace>Eventy</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <Authors>Thomas Ian Wright</Authors>
         <Company>Thomasianwright</Company>
     </PropertyGroup>
