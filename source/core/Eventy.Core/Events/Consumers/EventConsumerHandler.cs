@@ -33,7 +33,5 @@ namespace Eventy.Events.Consumers
         public abstract Task StartAsync(CancellationToken cancellationToken = default);
 
         public abstract Task StopAsync(CancellationToken cancellationToken = default);
-
-        protected abstract IEventContext CreateEventContext(IEvent @event, IDictionary<string, object> headers, Guid? messageId = null);
     }
 }

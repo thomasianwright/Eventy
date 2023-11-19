@@ -13,7 +13,7 @@ public class TestController : ControllerBase
     {
         var response = await publisher.RequestAsync(new TestRequest()
         {
-            CorrelationId = Guid.NewGuid(),
+            CorrelationId = Guid.NewGuid().ToString(),
             Message = message
         }, cancellationToken: cancellationToken);
 

@@ -8,9 +8,9 @@ using FluentResults;
 namespace Event.Demo.Api.Events;
 
 [EventTopology("test.request")]
-public class TestRequest : IEvent
+public class TestRequest : IRequest
 {
-    public Guid CorrelationId { set;get; }
+    public string CorrelationId { set;get; }
     
     public string Message { set; get; }
 }
