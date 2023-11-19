@@ -9,9 +9,9 @@ namespace Eventy.Transports.Services
     public interface IEventPublisher
     {
         Task<IResponse> RequestAsync<T>(T @event, IDictionary<string, object> headers = null,
-            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>;
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelated;
 
         Task PublishAsync<T>(T @event, IDictionary<string, object> headers = null, CancellationToken cancellationToken = default)
-            where T : IEvent, ICorrelatedBy<Guid>;
+            where T : IEvent, ICorrelated;
     }
 }

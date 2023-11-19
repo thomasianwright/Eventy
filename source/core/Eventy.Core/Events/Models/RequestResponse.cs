@@ -25,8 +25,8 @@ namespace Eventy.Events.Models
         [JsonIgnore]
         public IEventEncoder Encoder { get; set; }
 
-        public Guid CorrelationId { get; set; }
-        public Guid MessageId { get; set; }
+        public string CorrelationId { get; set; }
+        public string MessageId { get; set; }
         
         public string Type { get; set; }
         public string Body { get; set; }

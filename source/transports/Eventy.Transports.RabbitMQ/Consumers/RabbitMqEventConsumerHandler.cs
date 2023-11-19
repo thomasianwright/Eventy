@@ -4,16 +4,19 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eventy.Events.Constants;
 using Eventy.Events.Consumers;
 using Eventy.Events.Contexts;
 using Eventy.Events.Contracts;
 using Eventy.Events.Encoders;
+using Eventy.Events.Models;
 using Eventy.IoC.Services;
 using Eventy.Logging.Services;
 using Eventy.RabbitMQ.Contexts;
 using Eventy.RabbitMQ.Contracts;
 using Eventy.RabbitMQ.Extensions;
 using FluentResults;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -33,7 +36,7 @@ namespace Eventy.RabbitMQ.Consumers
             Encoder = encoder;
             _model = Provider.Connection.CreateModel();
             _methodInfo = ConsumerType.GetMethod("ConsumeAsync");
-            
+
             _model.ExchangeDeclare(Topology.ExchangeName, ExchangeType.Direct, true, false, null);
             _model.QueueDeclare(Topology.QueueName, true, false, false, null);
             _model.QueueBind(Topology.QueueName, Topology.ExchangeName, Topology.RoutingKey, null);
@@ -43,6 +46,8 @@ namespace Eventy.RabbitMQ.Consumers
             _model.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 
             _model.BasicConsume(Topology.QueueName, false, _consumer);
+            
+            _consumeAsync = ConfigureConsumeAsync();
         }
 
         private IEventEncoder Encoder { get; }
@@ -60,34 +65,55 @@ namespace Eventy.RabbitMQ.Consumers
 
                 var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 var headers = @event.BasicProperties.Headers ?? new Dictionary<string, object>();
-                
+
                 var body = @event.Body.ToArray();
 
                 var decodedEvent = Encoder.Decode<IEvent>(body, EventType);
+                var requestId = headers[HeaderConstants.RequestId] as string;
 
-                var context = CreateEventContext(decodedEvent, headers) as RabbitMqEventContext ??
-                              throw new InvalidOperationException("Invalid event context type");
-                context.DeliveryTag = @event.DeliveryTag;
-                context.ConsumingModel = consumingChannel;
+                var context = new RabbitMqEventContext(@event.BasicProperties.CorrelationId,
+                    @event.BasicProperties.MessageId, requestId, headers, Topology,
+                    async (data, responseHeaders, isSuccess) =>
+                    {
+                        var json = JsonConvert.SerializeObject(data);
+                        var messageId = Guid.NewGuid().ToString();
+                        var correlationId = @event.BasicProperties.CorrelationId;
 
-                using (var scope = ServiceResolver.CreateScope())
-                {
-                    var consumer = scope.GetService(ConsumerType) as IConsumer ??
-                                   throw new InvalidOperationException("Invalid consumer type");
-                    consumer.Bus = Provider;
-                    consumer.Context = context;
+                        var response = new RequestResponse
+                        {
+                            Body = json,
+                            IsSuccess = isSuccess,
+                            Type = data.GetType().Name,
+                            Headers = responseHeaders,
+                            CorrelationId = correlationId,
+                            MessageId = messageId,
+                        };
 
-                    var result = await ((Task<Result>)_methodInfo.Invoke(consumer, new object[] { decodedEvent, cts.Token }));
+                        var responseBytes = Encoder.Encode(response);
+                        var responseProperties = consumingChannel.CreateBasicProperties();
+                        responseProperties.CorrelationId = correlationId;
+                        responseProperties.MessageId = messageId;
+                        responseProperties.Persistent = true;
+                        responseProperties.ContentType = "application/json";
+                        responseProperties.Headers = responseHeaders;
 
-                    if (result.IsSuccess)
-                        context.Ack();
-                    else
-                        context.Nack();
-                }
-            } catch (Exception e)
-            {
-                Logger.LogError( $"Error while consuming event {EventType.Name}");
+                        responseHeaders.AddHeader("x-request-id", requestId);
+
+                        consumingChannel.BasicPublish("", @event.BasicProperties.ReplyTo, responseProperties,
+                            responseBytes);
+                    });
                 
+                var result = await _consumeAsync(ConsumerType, decodedEvent, Provider, context);
+                
+                if (result.IsSuccess)
+                    consumingChannel.BasicAck(@event.DeliveryTag, false);
+                else
+                    consumingChannel.BasicNack(@event.DeliveryTag, false, true);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error while consuming event {EventType.Name}");
+
                 _model.BasicNack(@event.DeliveryTag, false, true);
             }
         }
@@ -100,25 +126,24 @@ namespace Eventy.RabbitMQ.Consumers
             return Task.CompletedTask;
         }
 
-        protected override IEventContext CreateEventContext(IEvent @event, IDictionary<string, object> headers, Guid? messageId = null)
-        {
-            if (!messageId.HasValue)
-            {
-                messageId = Guid.NewGuid();
-            }
+        private Func<object, object, IRabbitMqTransportProvider, IEventContext, Task<Result>> _consumeAsync;
 
-            var requestIdExists = headers.GetHeader("x-request-id", out var requestId);
-            var requestIdGuid = Guid.Empty;
-            
-            if (requestIdExists)
+        private Func<object, object, IRabbitMqTransportProvider, IEventContext, Task<Result>> ConfigureConsumeAsync()
+        {
+            return async (handler, e, provider, ctx) =>
             {
-                requestIdGuid = Guid.Parse(requestId);
-            }
-            
-            return new RabbitMqEventContext(@event.CorrelationId, Topology, _model)
-            {
-                MessageId = messageId.Value,
-                RequestId = requestIdGuid
+                using (var scope = ServiceResolver.CreateScope())
+                {
+                    var consumer = scope.GetService(ConsumerType) as IConsumer ??
+                                   throw new InvalidOperationException("Invalid consumer type");
+                    consumer.Bus = Provider;
+                    consumer.Context = ctx;
+
+                    var result =
+                        await ((Task<Result>)_methodInfo.Invoke(consumer, new object[] { e, CancellationToken.None }));
+
+                    return result;
+                }
             };
         }
     }

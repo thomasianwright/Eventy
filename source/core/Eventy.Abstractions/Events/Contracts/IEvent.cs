@@ -2,7 +2,7 @@
 
 namespace Eventy.Events.Contracts
 {
-    public interface IEvent : ICorrelatedBy<Guid>
+    public interface IEvent : ICorrelated
     {
     }
 }

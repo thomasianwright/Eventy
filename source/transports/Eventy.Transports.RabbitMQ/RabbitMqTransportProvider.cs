@@ -100,12 +100,9 @@ namespace Eventy.RabbitMQ
         }
 
         public Task<IResponse> RequestAsync<T>(T @event, IDictionary<string, object> headers = null,
-            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelated
         {
             var topology = EventTopologies[@event.GetType()];
-            
-            if (@event.CorrelationId == Guid.Empty)
-                @event.CorrelationId = Guid.NewGuid();
             
             if (headers == null)
                 headers = new Dictionary<string, object>(topology.Headers);
@@ -124,7 +121,7 @@ namespace Eventy.RabbitMQ
         }
 
         public Task PublishAsync<T>(T @event, IDictionary<string, object> headers = null,
-            CancellationToken cancellationToken = default) where T : IEvent, ICorrelatedBy<Guid>
+            CancellationToken cancellationToken = default) where T : IEvent, ICorrelated
         {
             using (var model = Connection.CreateModel())
             {

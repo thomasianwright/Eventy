@@ -7,13 +7,13 @@ namespace Eventy.Events.States
 {
     public class RequestState : IRequestState
     {
-        public RequestState(Guid correlationId, CancellationToken cancellationToken)
+        public RequestState(string correlationId, CancellationToken cancellationToken)
         {
             CorrelationId = correlationId;
             TaskCompletionSource = new TaskCompletionSource<IResponse>(cancellationToken);
         }
 
-        public RequestState(Guid correlationId)
+        public RequestState(string correlationId)
         {
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var cancellationToken = cts.Token;
@@ -22,7 +22,7 @@ namespace Eventy.Events.States
             TaskCompletionSource = new TaskCompletionSource<IResponse>(cancellationToken);
         }
 
-        public Guid CorrelationId { get; set; }
+        public string CorrelationId { get; set; }
         public TaskCompletionSource<IResponse> TaskCompletionSource { get; }
 
         public void SetResponse(IResponse response)

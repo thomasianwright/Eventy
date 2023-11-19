@@ -39,13 +39,13 @@ namespace Eventy.RabbitMQ.Clients
             _model.BasicConsume(_topology.CallbackQueueName, false, _consumer);
         }
 
-        public ConcurrentDictionary<Guid, IRequestState> PendingRequests { get; } =
-            new ConcurrentDictionary<Guid, IRequestState>();
+        public ConcurrentDictionary<string, IRequestState> PendingRequests { get; } =
+            new ConcurrentDictionary<string, IRequestState>();
 
         public Task<IResponse> RequestAsync<T>(TEvent @event, IDictionary<string, object> headers, CancellationToken cancellationToken = default)
-            where T : IEvent, ICorrelatedBy<Guid>
+            where T : IEvent, ICorrelated
         {
-            var requestId = Guid.NewGuid();
+            var requestId = Guid.NewGuid().ToString();
             
             cancellationToken.Register(() => PendingRequests.TryRemove(requestId, out _));
             var state = new RequestState(requestId, cancellationToken);
@@ -75,13 +75,7 @@ namespace Eventy.RabbitMQ.Clients
             var headers = @event.BasicProperties.Headers ?? new ConcurrentDictionary<string, object>();
             var body = @event.Body.ToArray();
             
-            var requestidExists = headers.GetHeader("x-request-id", out var requestIdStr);
-            
-            if (!requestidExists || !Guid.TryParse(requestIdStr, out var requestId))
-            {
-                _model.BasicAck(@event.DeliveryTag, false);
-                return;
-            }
+            var requestidExists = headers.GetHeader("x-request-id", out var requestId);
 
             if (!PendingRequests.TryRemove(requestId, out var state))
                 return;
