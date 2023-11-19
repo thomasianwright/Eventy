@@ -32,7 +32,7 @@ namespace Eventy.RabbitMQ.Clients
             var queueName = $"{_topology.QueueName}.callback";
             
             _model.BasicQos(0, 5, false);
-            _model.ExchangeDeclare(_topology.ExchangeName, ExchangeType.Direct, true, false, null);
+            _model.ExchangeDeclare(_topology.ExchangeName, _topology.ExchangeType, true, false, null);
             _model.QueueDeclare(queueName, true, false, false, null);
             _model.QueueBind(queueName, _topology.ExchangeName, $"{_topology.RoutingKey}.callback", null);
             

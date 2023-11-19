@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eventy.Collections;
@@ -23,7 +21,7 @@ using RabbitMQ.Client.Events;
 
 namespace Eventy.RabbitMQ.Consumers
 {
-    public sealed class RabbitMqEventConsumerHandler : EventConsumerHandler<IRabbitMqTransportProvider>
+    public sealed class RabbitMqEventConsumerHandler : EventConsumerHandler<IRabbitMqTransportProvider>, IDisposable
     {
         private readonly IModel _model;
         private AsyncEventingBasicConsumer _consumer;
@@ -159,6 +157,11 @@ namespace Eventy.RabbitMQ.Consumers
                     return Result.Fail(new Error(ex.Message));
                 }
             };
+        }
+
+        public void Dispose()
+        {
+            _model?.Dispose();
         }
     }
 }

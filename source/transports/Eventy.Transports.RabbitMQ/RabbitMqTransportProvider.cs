@@ -61,6 +61,19 @@ namespace Eventy.RabbitMQ
                 if (topologyAttribute == null)
                     throw new Exception($"Event type {eventType.Name} does not have EventTopologyAttribute");
 
+                if (eventType.GetInterface(nameof(IMessage)) != null)
+                {
+                    topologyAttribute.ExchangeType = ExchangeType.Topic;
+                }
+                else if (eventType.GetInterface(nameof(INotification)) != null)
+                {
+                    topologyAttribute.ExchangeType = ExchangeType.Fanout;
+                }
+                else if (eventType.GetInterface(nameof(IRequest)) != null)
+                {
+                    topologyAttribute.ExchangeType = ExchangeType.Topic;
+                }
+
                 EventTopologies.TryAdd(eventType, topologyAttribute);
             }
 
@@ -103,7 +116,7 @@ namespace Eventy.RabbitMQ
             CancellationToken cancellationToken = default) where T : IEvent, ICorrelated
         {
             var topology = EventTopologies[@event.GetType()];
-            
+
             if (headers == null)
                 headers = new Dictionary<string, object>(topology.Headers);
             else
@@ -129,7 +142,7 @@ namespace Eventy.RabbitMQ
                 var body = Encoder.Encode(@event);
 
                 var properties = model.CreateBasicProperties();
-                
+
                 foreach (var header in headers ?? new Dictionary<string, object>())
                     properties.Headers.Add(header.Key, header.Value);
 
