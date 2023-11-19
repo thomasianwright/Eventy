@@ -33,6 +33,8 @@ var connectionFactory = new ConnectionFactory
 
 var conn =  connectionFactory.CreateConnection();
 
+
+
 builder.Services.AddSingleton<IConnection>(conn);
 
 builder.Services.AddSingleton<IEventEncoder, EventEncoder>()

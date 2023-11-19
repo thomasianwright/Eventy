@@ -12,12 +12,12 @@ public class TestEvent : IEvent
 {
     public TestEvent()
     {
-        CorrelationId = Guid.NewGuid();
+        CorrelationId = Guid.NewGuid().ToString();
     }
 
     public string Message { get; set; }
     public DateTime CreatedAt { get; set; }
-    public Guid CorrelationId { get; set; }
+    public string CorrelationId { get; set; }
 }
 
 public class TestEventConsumer : IConsumer<TestEvent>
@@ -33,9 +33,7 @@ public class TestEventConsumer : IConsumer<TestEvent>
     {
         _logger.LogInformation(
             $"Received event {@event.CorrelationId} with message {@event.Message} TIME: {DateTimeOffset.UtcNow}");
-
-        Context.Ack();
-
+        
         return Task.FromResult(Result.Ok());
     }
 
